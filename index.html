@@ -28,26 +28,27 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm mb-2 text-zinc-400">Sök</label>
-                <input id="searchInput" type="text" placeholder="Namn, producent..." 
+                <label class="block text-sm mb-2 text-zinc-400">Sök produkt</label>
+                <input id="searchInput" type="text" placeholder="Namn eller producent..." 
                        onkeyup="filterData()" 
-                       class="w-full bg-zinc-800 rounded-2xl px-4 py-3">
+                       class="w-full bg-zinc-800 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
             </div>
             <div class="flex items-end">
                 <button onclick="refreshData()" 
-                        class="w-full bg-amber-400 hover:bg-amber-500 text-zinc-950 font-semibold py-3 rounded-2xl flex items-center justify-center gap-2">
+                        class="w-full bg-amber-400 hover:bg-amber-500 text-zinc-950 font-semibold py-3 rounded-2xl flex items-center justify-center gap-2 transition">
                     <i class="fas fa-sync"></i> Uppdatera data
                 </button>
             </div>
         </div>
 
         <div id="loading" class="hidden text-center py-12">
-            <i class="fas fa-spinner fa-spin text-4xl"></i>
+            <i class="fas fa-spinner fa-spin text-4xl text-amber-400"></i>
+            <p class="mt-3 text-zinc-400">Laddar produkter...</p>
         </div>
 
         <div class="bg-zinc-900 rounded-3xl overflow-hidden">
             <table class="w-full">
-                <thead class="bg-zinc-800">
+                <thead class="bg-zinc-800 sticky top-0">
                     <tr>
                         <th class="p-5 text-left">Produkt</th>
                         <th class="p-5 text-left">Kategori</th>
@@ -60,6 +61,10 @@
                 <tbody id="tableBody" class="divide-y divide-zinc-800"></tbody>
             </table>
         </div>
+
+        <div class="text-center text-xs text-zinc-500 mt-8">
+            Data från Systembolaget • Endast informationssyfte • Drick ansvarsfullt
+        </div>
     </div>
 
     <script>
@@ -70,13 +75,15 @@
             try {
                 const res = await fetch('/api/products');
                 allProducts = await res.json();
-            } catch(e) {}
+            } catch (e) {
+                console.error(e);
+            }
             document.getElementById('loading').classList.add('hidden');
             filterData();
         }
 
         function filterData() {
-            const term = document.getElementById('searchInput').value.toLowerCase();
+            const term = document.getElementById('searchInput').value.toLowerCase().trim();
             const cat = document.getElementById('category').value;
 
             const filtered = allProducts.filter(p => {
@@ -92,11 +99,12 @@
             tbody.innerHTML = products.map(p => `
                 <tr class="hover:bg-zinc-800 transition-colors">
                     <td class="p-5">
-                        <a href="${p.url}" target="_blank" class="hover:underline font-medium">
+                        <a href="${p.url || '#'}" target="_blank" rel="noopener noreferrer" 
+                           class="hover:underline font-medium text-amber-400 hover:text-amber-300">
                             ${p.productNameBold} ${p.productNameThin ? `<span class="text-zinc-400">${p.productNameThin}</span>` : ''}
                         </a>
                     </td>
-                    <td class="p-5">${p.categoryLevel1}</td>
+                    <td class="p-5">${p.categoryLevel1 || ''}</td>
                     <td class="p-5 text-right">${p.alcoholPercentage}%</td>
                     <td class="p-5 text-right">${p.volumeText}</td>
                     <td class="p-5 text-right">${p.price} kr</td>
@@ -109,6 +117,7 @@
             await fetchProducts();
         }
 
+        // Start
         window.onload = fetchProducts;
     </script>
 </body>
