@@ -17,22 +17,34 @@ export default async function handler(req, res) {
             ? parseFloat(((alcohol / 100 * volumeMl) / price).toFixed(3)) 
             : 0;
 
-          // Förbättrad länk till Systembolaget
+          // Bättre URL-skapande
           let sysUrl = '#';
           const productNumber = p.productId || p.nr || p.articleNumber || p.productNumber;
 
           if (productNumber) {
             const nr = productNumber.toString().padStart(6, '0');
-            const category = (p.categoryLevel1 || 'dryck').toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
-            const nameSlug = (p.productNameBold || p.name || 'produkt')
+            
+            // Slug för namn (tar bort åäö och specialtecken)
+            let nameSlug = (p.productNameBold || p.name || 'produkt')
               .toLowerCase()
+              .replace(/å/g, 'a')
+              .replace(/ä/g, 'a')
+              .replace(/ö/g, 'o')
               .replace(/[^a-z0-9-]/g, '-')
               .replace(/-+/g, '-')
               .replace(/^-|-$/g, '');
 
+            const category = (p.categoryLevel1 || 'dryck')
+              .toLowerCase()
+              .replace(/å/g, 'a')
+              .replace(/ä/g, 'a')
+              .replace(/ö/g, 'o')
+              .replace(/ & /g, '-')
+              .replace(/ /g, '-');
+
             sysUrl = `https://www.systembolaget.se/produkt/${category}/${nameSlug}-${nr}`;
-          } else if (p.productNameBold || p.name) {
-            const searchName = encodeURIComponent((p.productNameBold || p.name));
+          } else {
+            const searchName = encodeURIComponent(p.productNameBold || p.name || '');
             sysUrl = `https://www.systembolaget.se/sok/?text=${searchName}`;
           }
 
@@ -53,7 +65,7 @@ export default async function handler(req, res) {
       return res.status(200).json(formatted.slice(0, 1200));
     }
   } catch (e) {
-    console.error(e);
+    console.error("Error:", e);
   }
 
   res.status(200).json([]);
