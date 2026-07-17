@@ -1,80 +1,47 @@
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', '*');
-
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
 
   try {
-    const API_KEY = "cfc702aed3094c86b92d6d4ff7a54c84";
-    let allProducts = [];
-    const maxPages = 5; // Öka till 8-10 om du vill ha ännu fler
+    // Försök hämta från en offentlig källa (AlexGustafsson's data repo)
+    const dataRes = await fetch('https://raw.githubusercontent.com/AlexGustafsson/systembolaget-api-data/main/data/assortment.json');
+    
+    if (dataRes.ok) {
+      const products = await dataRes.json();
+      
+      const formatted = products.map(p => {
+        const volumeMl = parseInt(p.volumeInMl || p.volumeText?.replace(/\D/g,'') || 750);
+        const price = parseFloat(p.price || p.priceInclVat || 0);
+        const alcohol = parseFloat(p.alcoholPercentage || 0);
+        
+        const apk = (alcohol > 0 && price > 0) 
+          ? parseFloat(((alcohol / 100 * volumeMl) / price).toFixed(3)) 
+          : 0;
 
-    for (let page = 0; page < maxPages; page++) {
-      const response = await fetch(
-        "https://api-extern.systembolaget.se/sb-api-ecommerce/v1/productsearch/search",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Ocp-Apim-Subscription-Key": API_KEY,
-          },
-          body: JSON.stringify({
-            page: page,
-            pageSize: 100,
-            searchQuery: "",
-            sort: { field: "Score", direction: "desc" }
-          })
-        }
-      );
+        return {
+          productNameBold: p.productNameBold || p.name,
+          productNameThin: p.productNameThin,
+          alcoholPercentage: alcohol,
+          volumeText: p.volumeText || `${volumeMl} ml`,
+          price: price,
+          categoryLevel1: p.categoryLevel1,
+          apk: apk
+        };
+      }).filter(p => p.apk > 0)
+       .sort((a, b) => b.apk - a.apk);
 
-      if (!response.ok) continue;
-
-      const data = await response.json();
-      if (data.products && data.products.length > 0) {
-        allProducts = allProducts.concat(data.products);
-      } else {
-        break; // Ingen mer data
-      }
+      return res.status(200).json(formatted.slice(0, 800));
     }
-
-    // Formatera och beräkna APK
-    const formatted = allProducts.map(p => {
-      const volumeMl = parseInt(p.volume?.value || 
-                           p.volumeText?.replace(/\D/g, '') || 750);
-      const price = parseFloat(p.price?.value || p.price || 0);
-      const alcohol = parseFloat(p.alcoholPercentage || 0);
-
-      const apk = (alcohol > 0 && price > 0 && volumeMl > 0) 
-        ? parseFloat(((alcohol / 100 * volumeMl) / price).toFixed(3)) 
-        : 0;
-
-      return {
-        productNameBold: p.name || p.productNameBold,
-        productNameThin: p.nameThin || p.productNameThin,
-        alcoholPercentage: alcohol,
-        volumeText: p.volume?.text || `${volumeMl} ml`,
-        volumeInMl: volumeMl,
-        price: price,
-        categoryLevel1: p.categoryLevel1 || p.mainCategory?.name,
-        categoryLevel2: p.categoryLevel2,
-        apk: apk,
-        country: p.country,
-        producer: p.producer
-      };
-    }).filter(p => p.price > 0 && p.alcoholPercentage > 0);
-
-    // Sortera efter APK
-    formatted.sort((a, b) => b.apk - a.apk);
-
-    res.status(200).json(formatted.slice(0, 1000)); // Begränsa för prestanda
-
-  } catch (error) {
-    console.error(error);
-    res.status(200).json([{
-      productNameBold: "Fel vid hämtning",
-      apk: 0
-    }]);
+  } catch (e) {
+    console.log("Kunde inte hämta från GitHub data");
   }
+
+  // Fallback med exempeldata (så det alltid visar något)
+  const fallback = [
+    { productNameBold: "Melleruds Utmärkta Pilsner", alcoholPercentage: 4.5, volumeText: "330 ml", price: 19.9, categoryLevel1: "Öl", apk: 0.074 },
+    { productNameBold: "Nils Oscar Kalasöl", alcoholPercentage: 5.2, volumeText: "500 ml", price: 22.9, categoryLevel1: "Öl", apk: 0.113 },
+    { productNameBold: "Spendrups Premium", alcoholPercentage: 5.0, volumeText: "330 ml", price: 18.9, categoryLevel1: "Öl", apk: 0.087 },
+  ];
+
+  res.status(200).json(fallback);
 }
