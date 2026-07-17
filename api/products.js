@@ -17,30 +17,24 @@ export default async function handler(req, res) {
             ? parseFloat(((alcohol / 100 * volumeMl) / price).toFixed(3)) 
             : 0;
 
-          // Förbättrad sökning
-          let searchQuery = p.productNameBold || p.name || '';
-          if (p.producer) searchQuery += ' ' + p.producer;
-
-          const searchTerm = encodeURIComponent(searchQuery.trim());
+          const searchTerm = encodeURIComponent(p.productNameBold || p.name || '');
           const sysUrl = `https://www.systembolaget.se/sortiment/?q=${searchTerm}`;
-
-          const displayPrice = price.toFixed(2).replace('.', ',');
 
           return {
             productNameBold: p.productNameBold || p.name,
             productNameThin: p.productNameThin,
             alcoholPercentage: alcohol,
             volumeText: `${volumeMl} ml`,
-            price: displayPrice,
+            price: price.toFixed(2).replace('.', ','),
             categoryLevel1: p.categoryLevel1,
             apk: apk,
             url: sysUrl
           };
         })
-        .filter(p => p.price > 0 && p.alcoholPercentage > 0 && p.productNameBold)
+        .filter(p => p.price > 0 && p.alcoholPercentage > 0)
         .sort((a, b) => b.apk - a.apk);
 
-      return res.status(200).json(formatted.slice(0, 1500));
+      return res.status(200).json(formatted.slice(0, 1000));
     }
   } catch (e) {
     console.error(e);
