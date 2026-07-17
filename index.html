@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Systembolaget APK</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-4xl font-bold mb-8">🍺 APK – Bäst värde på Systembolaget</h1>
+    
+    <div class="flex gap-4 mb-6">
+      <select id="category" class="p-3 border rounded-lg">
+        <option value="">Alla kategorier</option>
+        <option value="Öl">Öl</option>
+        <option value="Vin">Vin</option>
+        <option value="Sprit">Sprit</option>
+        <!-- Lägg till fler -->
+      </select>
+      <button onclick="loadData()" 
+              class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+        Hämta & Sortera
+      </button>
+    </div>
+
+    <table id="resultTable" class="w-full bg-white shadow rounded-lg overflow-hidden">
+      <thead class="bg-gray-800 text-white">
+        <tr>
+          <th class="p-4 text-left">Produkt</th>
+          <th class="p-4 text-left">Kategori</th>
+          <th class="p-4">Alk %</th>
+          <th class="p-4">Volym (ml)</th>
+          <th class="p-4">Pris (kr)</th>
+          <th class="p-4 font-bold">APK</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody" class="divide-y"></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function loadData() {
+      const category = document.getElementById('category').value;
+      const url = `http://localhost:8000/products${category ? `?category=${encodeURIComponent(category)}` : ''}`;
+      
+      const res = await fetch(url);
+      const products = await res.json();
+      
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = products.slice(0, 100).map(p => `
+        <tr class="hover:bg-gray-50">
+          <td class="p-4">${p.productNameBold} ${p.productNameThin || ''}</td>
+          <td class="p-4">${p.categoryLevel1} ${p.categoryLevel2 ? '- ' + p.categoryLevel2 : ''}</td>
+          <td class="p-4 text-center">${p.alcoholPercentage}</td>
+          <td class="p-4 text-center">${p.volumeInMl || p.volumeText}</td>
+          <td class="p-4 text-center">${p.price}</td>
+          <td class="p-4 text-center font-bold text-green-600">${p.apk.toFixed(3)}</td>
+        </tr>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
