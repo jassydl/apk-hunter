@@ -37,6 +37,7 @@ export default async function handler(req, res) {
             categoryLevel1: p.categoryLevel1,
             apk: apk,
             url: sysUrl
+            articleNumber: p.articleNumber || p.nr || p.productId,
           };
         })
         .filter(p => p.price > 0 && p.alcoholPercentage > 0)
