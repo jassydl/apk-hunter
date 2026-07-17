@@ -6,73 +6,59 @@
     <title>APK Hunter - Systembolaget</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; }
-        tr:hover { background-color: #18181b; }
-    </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen">
+<body class="bg-zinc-950 text-zinc-100">
     <div class="max-w-7xl mx-auto p-6">
         <header class="flex justify-between items-center mb-10">
-            <div>
-                <h1 class="text-5xl font-bold flex items-center gap-3">
-                    <span class="text-amber-400">🍺</span> APK Hunter
-                </h1>
-                <p class="text-zinc-400 mt-2 text-lg">Bästa alkohol per krona på Systembolaget</p>
-            </div>
-            <div class="text-sm text-zinc-500">
-                Uppdaterad: <span id="lastUpdated">—</span>
-            </div>
+            <h1 class="text-5xl font-bold flex items-center gap-3">
+                <span class="text-amber-400">🍺</span> APK Hunter
+            </h1>
+            <p class="text-zinc-400">Bästa värdet på Systembolaget • Daglig uppdatering</p>
         </header>
 
-        <div class="flex flex-wrap gap-4 mb-8 bg-zinc-900 p-6 rounded-2xl">
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm text-zinc-400 mb-2">Kategori</label>
-                <select id="category" onchange="filterData()" 
-                        class="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white">
-                    <option value="">Alla kategorier</option>
+        <div class="bg-zinc-900 p-6 rounded-3xl mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm mb-2 text-zinc-400">Kategori</label>
+                <select id="category" onchange="filterData()" class="w-full bg-zinc-800 rounded-2xl px-4 py-3">
+                    <option value="">Alla</option>
                     <option value="Öl">🍺 Öl</option>
                     <option value="Vin">🍷 Vin</option>
                     <option value="Sprit">🥃 Sprit</option>
+                    <option value="Cider & blanddryck">🥤 Cider & blanddryck</option>
                 </select>
             </div>
-            
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm text-zinc-400 mb-2">Sök produkt</label>
-                <input id="searchInput" type="text" placeholder="Sök på namn..." 
-                       onkeyup="filterData()"
-                       class="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white">
+            <div>
+                <label class="block text-sm mb-2 text-zinc-400">Sök</label>
+                <input id="searchInput" type="text" placeholder="Namn, producent..." 
+                       onkeyup="filterData()" 
+                       class="w-full bg-zinc-800 rounded-2xl px-4 py-3">
             </div>
-
             <div class="flex items-end">
                 <button onclick="refreshData()" 
-                        class="bg-amber-400 hover:bg-amber-500 text-zinc-950 font-semibold px-8 py-3 rounded-xl flex items-center gap-2">
-                    <i class="fas fa-sync"></i> Uppdatera
+                        class="w-full bg-amber-400 hover:bg-amber-500 text-zinc-950 font-semibold py-3 rounded-2xl flex items-center justify-center gap-2">
+                    <i class="fas fa-sync"></i> Uppdatera data
                 </button>
             </div>
         </div>
 
-        <div id="loading" class="hidden text-center py-20">
-            <i class="fas fa-spinner fa-spin text-4xl text-amber-400"></i>
-            <p class="mt-4">Laddar produkter från Systembolaget...</p>
+        <div id="loading" class="hidden text-center py-12">
+            <i class="fas fa-spinner fa-spin text-4xl"></i>
         </div>
 
         <div class="bg-zinc-900 rounded-3xl overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full" id="productTable">
-                    <thead class="bg-zinc-800">
-                        <tr>
-                            <th class="p-4 text-left">Produkt</th>
-                            <th class="p-4 text-left">Kategori</th>
-                            <th class="p-4 text-right">Alk %</th>
-                            <th class="p-4 text-right">Volym</th>
-                            <th class="p-4 text-right">Pris</th>
-                            <th class="p-4 text-right font-bold">APK</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-zinc-800 text-sm"></tbody>
-                </table>
-            </div>
+            <table class="w-full">
+                <thead class="bg-zinc-800">
+                    <tr>
+                        <th class="p-5 text-left">Produkt</th>
+                        <th class="p-5 text-left">Kategori</th>
+                        <th class="p-5 text-right">Alk %</th>
+                        <th class="p-5 text-right">Volym</th>
+                        <th class="p-5 text-right">Pris</th>
+                        <th class="p-5 text-right font-bold">APK</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-zinc-800"></tbody>
+            </table>
         </div>
     </div>
 
@@ -84,25 +70,19 @@
             try {
                 const res = await fetch('/api/products');
                 allProducts = await res.json();
-                document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString('sv-SE');
-                filterData();
-            } catch (e) {
-                alert("Kunde inte hämta data. Se till att backend är deployad.");
-            }
+            } catch(e) {}
             document.getElementById('loading').classList.add('hidden');
+            filterData();
         }
 
         function filterData() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
+            const term = document.getElementById('searchInput').value.toLowerCase();
             const cat = document.getElementById('category').value;
 
-            let filtered = allProducts.filter(p => {
+            const filtered = allProducts.filter(p => {
                 const name = (p.productNameBold + " " + (p.productNameThin || "")).toLowerCase();
-                return (!cat || p.categoryLevel1 === cat) && name.includes(search);
+                return (!cat || p.categoryLevel1 === cat) && name.includes(term);
             });
-
-            // Sortera efter APK
-            filtered.sort((a, b) => (b.apk || 0) - (a.apk || 0));
 
             renderTable(filtered);
         }
@@ -110,13 +90,17 @@
         function renderTable(products) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = products.map(p => `
-                <tr class="hover:bg-zinc-800 transition">
-                    <td class="p-4 font-medium">${p.productNameBold} <span class="text-zinc-400">${p.productNameThin || ''}</span></td>
-                    <td class="p-4">${p.categoryLevel1 || ''}</td>
-                    <td class="p-4 text-right">${p.alcoholPercentage}%</td>
-                    <td class="p-4 text-right">${p.volumeText || p.volumeInMl}</td>
-                    <td class="p-4 text-right">${p.price} kr</td>
-                    <td class="p-4 text-right font-bold text-emerald-400">${p.apk?.toFixed(3) || '—'}</td>
+                <tr class="hover:bg-zinc-800 transition-colors">
+                    <td class="p-5">
+                        <a href="${p.url}" target="_blank" class="hover:underline font-medium">
+                            ${p.productNameBold} ${p.productNameThin ? `<span class="text-zinc-400">${p.productNameThin}</span>` : ''}
+                        </a>
+                    </td>
+                    <td class="p-5">${p.categoryLevel1}</td>
+                    <td class="p-5 text-right">${p.alcoholPercentage}%</td>
+                    <td class="p-5 text-right">${p.volumeText}</td>
+                    <td class="p-5 text-right">${p.price} kr</td>
+                    <td class="p-5 text-right font-bold text-emerald-400">${p.apk}</td>
                 </tr>
             `).join('');
         }
