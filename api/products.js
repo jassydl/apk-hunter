@@ -4,45 +4,49 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', '*');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    // Systembolaget's public search endpoint (unofficial but widely used)
-    const API_KEY = "cfc702aed3094c86b92d6d4ff7a54c84"; // Public key from their site
-    
-    const response = await fetch(
-      "https://api-extern.systembolaget.se/sb-api-ecommerce/v1/productsearch/search", 
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Ocp-Apim-Subscription-Key": API_KEY,
-        },
-        body: JSON.stringify({
-          page: 0,
-          pageSize: 500,           // Max per request
-          searchQuery: "",
-          sort: { field: "Score", direction: "desc" }
-        })
-      }
-    );
+    const API_KEY = "cfc702aed3094c86b92d6d4ff7a54c84";
+    let allProducts = [];
+    const maxPages = 5; // Öka till 8-10 om du vill ha ännu fler
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+    for (let page = 0; page < maxPages; page++) {
+      const response = await fetch(
+        "https://api-extern.systembolaget.se/sb-api-ecommerce/v1/productsearch/search",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Ocp-Apim-Subscription-Key": API_KEY,
+          },
+          body: JSON.stringify({
+            page: page,
+            pageSize: 100,
+            searchQuery: "",
+            sort: { field: "Score", direction: "desc" }
+          })
+        }
+      );
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      if (data.products && data.products.length > 0) {
+        allProducts = allProducts.concat(data.products);
+      } else {
+        break; // Ingen mer data
+      }
     }
 
-    const data = await response.json();
-    const products = data.products || [];
+    // Formatera och beräkna APK
+    const formatted = allProducts.map(p => {
+      const volumeMl = parseInt(p.volume?.value || 
+                           p.volumeText?.replace(/\D/g, '') || 750);
+      const price = parseFloat(p.price?.value || p.price || 0);
+      const alcohol = parseFloat(p.alcoholPercentage || 0);
 
-    // Beräkna APK och forma data
-    const formatted = products.map(p => {
-      const volumeMl = parseInt(p.volume?.value || p.volumeText?.replace(/\D/g, '') || 750);
-      const price = parseFloat(p.price?.value || p.price);
-      const alcohol = parseFloat(p.alcoholPercentage);
-
-      const apk = (alcohol && price && volumeMl) 
+      const apk = (alcohol > 0 && price > 0 && volumeMl > 0) 
         ? parseFloat(((alcohol / 100 * volumeMl) / price).toFixed(3)) 
         : 0;
 
@@ -53,33 +57,24 @@ export default async function handler(req, res) {
         volumeText: p.volume?.text || `${volumeMl} ml`,
         volumeInMl: volumeMl,
         price: price,
-        categoryLevel1: p.categoryLevel1 || p.mainCategory,
+        categoryLevel1: p.categoryLevel1 || p.mainCategory?.name,
         categoryLevel2: p.categoryLevel2,
         apk: apk,
         country: p.country,
         producer: p.producer
       };
-    });
+    }).filter(p => p.price > 0 && p.alcoholPercentage > 0);
 
-    // Sortera efter APK (högst först)
+    // Sortera efter APK
     formatted.sort((a, b) => b.apk - a.apk);
 
-    res.status(200).json(formatted);
+    res.status(200).json(formatted.slice(0, 1000)); // Begränsa för prestanda
 
   } catch (error) {
-    console.error("Error fetching Systembolaget data:", error);
-    
-    // Fallback till exempeldata om API:et krånglar
-    res.status(200).json([
-      {
-        productNameBold: "Melleruds",
-        productNameThin: "Utmärkta Pilsner",
-        alcoholPercentage: 4.5,
-        volumeText: "330 ml",
-        price: 19.9,
-        categoryLevel1: "Öl",
-        apk: 0.074
-      }
-    ]);
+    console.error(error);
+    res.status(200).json([{
+      productNameBold: "Fel vid hämtning",
+      apk: 0
+    }]);
   }
 }
