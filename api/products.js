@@ -17,13 +17,9 @@ export default async function handler(req, res) {
             ? parseFloat(((alcohol / 100 * volumeMl) / price).toFixed(3)) 
             : 0;
 
-          // Enkel och säker sök-länk
-          const searchTerm = encodeURIComponent(
-            (p.productNameBold || p.name || '').trim()
-          );
-          const sysUrl = searchTerm 
-            ? `https://www.systembolaget.se/sok/?text=${searchTerm}` 
-            : '#';
+          // Enklare sökning - bara huvudnamnet
+          const mainName = (p.productNameBold || p.name || 'öl').split(' ')[0];
+          const sysUrl = `https://www.systembolaget.se/sok/?text=${encodeURIComponent(mainName)}`;
 
           return {
             productNameBold: p.productNameBold || p.name,
@@ -41,9 +37,7 @@ export default async function handler(req, res) {
 
       return res.status(200).json(formatted.slice(0, 1200));
     }
-  } catch (e) {
-    console.error(e);
-  }
+  } catch (e) {}
 
   res.status(200).json([]);
 }
