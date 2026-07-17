@@ -17,15 +17,23 @@ export default async function handler(req, res) {
             ? parseFloat(((alcohol / 100 * volumeMl) / price).toFixed(3)) 
             : 0;
 
-          // Skapa länk till Systembolaget
-          const productId = p.productId || p.nr || p.articleNumber;
-          const sysUrl = productId ? `https://www.systembolaget.se/produkt/${productId.toString().padStart(6, '0')}` : '#';
+          // Bättre länk till Systembolaget
+          const productNumber = p.productId || p.nr || p.articleNumber || p.productNumber;
+          let sysUrl = '#';
+
+          if (productNumber) {
+            const nr = productNumber.toString().padStart(6, '0');
+            sysUrl = `https://www.systembolaget.se/produkt/${nr.substring(0,3)}/${nr.substring(3)}`;
+          } else if (p.productNameBold || p.name) {
+            const searchName = encodeURIComponent((p.productNameBold || p.name).replace(/ /g, '+'));
+            sysUrl = `https://www.systembolaget.se/sok/?text=${searchName}`;
+          }
 
           return {
             productNameBold: p.productNameBold || p.name,
             productNameThin: p.productNameThin,
             alcoholPercentage: alcohol,
-            volumeText: `${volumeMl} ml`,           // Standardisera volym
+            volumeText: `${volumeMl} ml`,
             price: price,
             categoryLevel1: p.categoryLevel1,
             apk: apk,
@@ -33,12 +41,14 @@ export default async function handler(req, res) {
             country: p.country
           };
         })
-        .filter(p => p.price > 0 && p.alcoholPercentage > 0 && p.volumeText.includes("ml"))
+        .filter(p => p.price > 0 && p.alcoholPercentage > 0)
         .sort((a, b) => b.apk - a.apk);
 
       return res.status(200).json(formatted.slice(0, 1200));
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("Fetch error:", e);
+  }
 
   // Fallback
   res.status(200).json([]);
